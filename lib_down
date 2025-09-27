@@ -1,0 +1,7 @@
+pip install SpeechRecognition
+pip install pyttsx3
+pip install pywhatkit
+pip install psutil
+pip install pyautogui
+pip install pyaudio
+pip install PyAudio-<version>.whl
