@@ -5,9 +5,9 @@ import sys
 import pywhatkit
 import pyttsx3
 import os
-import subprocess
 import psutil
 import pyautogui
+import wikipedia
 
 engine = pyttsx3.init()
 voices = engine.getProperty("voices")
@@ -52,7 +52,6 @@ def show_help():
     13. voice male/female      - Change assistant voice
     14. help                   - Show this help menu
     15. exit / quit            - Exit assistant
-  
     """
     print(commands)
     speak("I have shown the list of commands on your screen.")
@@ -71,19 +70,18 @@ def run_ai():
     wish_me()
     while True:
         query = take_command().strip()
-
         if not query:
             continue
 
-
-        if "time" in query:  # Basic Commands
+        # Time
+        if "time" in query:
             strTime = datetime.datetime.now().strftime("%H:%M:%S")
             speak(f"The time is {strTime}")
             print(f"[{APP_NAME}] Time: {strTime}")
 
+        # Open apps/websites
         elif query.startswith("open "):
             app = query.replace("open ", "").strip()
-
             if app == "notepad":
                 os.startfile("notepad.exe")
                 speak("Opening Notepad")
@@ -97,6 +95,7 @@ def run_ai():
                 speak(f"Opening {app}")
                 webbrowser.open(f"https://{app}.com")
 
+        # Play song on YouTube
         elif query.startswith("play "):
             song = query.replace("play ", "", 1).strip()
             if not song:
@@ -105,6 +104,7 @@ def run_ai():
             speak(f"Playing {song} on YouTube")
             pywhatkit.playonyt(song)
 
+        # Google search
         elif query.startswith("search "):
             search_query = query.replace("search ", "", 1).strip()
             if not search_query:
@@ -113,7 +113,8 @@ def run_ai():
             speak(f"Searching for {search_query}")
             webbrowser.open(f"https://www.google.com/search?q={search_query}")
 
-        elif "shutdown" in query:        # System Controls
+        # System controls
+        elif "shutdown" in query:
             speak("Shutting down your computer.")
             os.system("shutdown /s /t 1")
 
@@ -125,23 +126,36 @@ def run_ai():
             speak("Logging out now.")
             os.system("shutdown -l")
 
+        # Screenshot
         elif "screenshot" in query:
+            folder = "screenshots"
+            os.makedirs(folder, exist_ok=True)
+            i = 1
+            while os.path.exists(os.path.join(folder, f"screenshot{i}.png")):
+                i += 1
+            filepath = os.path.join(folder, f"screenshot{i}.png")
             screenshot = pyautogui.screenshot()
-            screenshot.save("screenshot.png")
-            speak("Screenshot taken and saved as screenshot.png")
+            screenshot.save(filepath)
+            speak(f"Screenshot taken and saved as {filepath}")
 
+        # Mute system volume
         elif "mute" in query:
             os.system("nircmd.exe mutesysvolume 1")  # requires NirCmd tool installed
             speak("System volume muted")
 
+        # Battery status
         elif "battery" in query:
             battery = psutil.sensors_battery()
-            percent = battery.percent
-            plugged = "Plugged In" if battery.power_plugged else "Not Plugged In"
-            speak(f"Battery is at {percent} percent and it is {plugged}")
-            print(f"[{APP_NAME}] Battery: {percent}% ({plugged})")
+            if battery:
+                percent = battery.percent
+                plugged = "Plugged In" if battery.power_plugged else "Not Plugged In"
+                speak(f"Battery is at {percent} percent and it is {plugged}")
+                print(f"[{APP_NAME}] Battery: {percent}% ({plugged})")
+            else:
+                speak("Battery information not available.")
 
-        elif "take a note" in query:  # Notes Feature
+        # Notes
+        elif "take a note" in query:
             speak("What should I write in your note?")
             note = take_command()
             with open("notes.txt", "a") as f:
@@ -162,7 +176,8 @@ def run_ai():
             else:
                 speak("No notes found yet.")
 
-        elif "voice" in query:  #  Voice Change
+        # Voice change
+        elif "voice" in query:
             if "male" in query:
                 engine.setProperty("voice", voices[0].id)
                 speak("I will now speak in a male voice.")
@@ -170,20 +185,35 @@ def run_ai():
                 engine.setProperty("voice", voices[1].id)
                 speak("I will now speak in a female voice.")
 
+        # Help
         elif "help" in query:
             show_help()
 
+        # Exit
         elif "exit" in query or "quit" in query:
             speak(f"Goodbye! {APP_NAME} is shutting down. Have a nice day.")
             sys.exit()
 
-        else:        #  Offline Fallback
-            # If internet is down, at least say something
+        # Fallback: auto decide response
+        else:
             try:
-                speak("I can search that for you")
+                summary = wikipedia.summary(query, sentences=2, auto_suggest=True, redirect=True)
+                print(f"\n[{APP_NAME}] Info about '{query}':\n{summary}\n")
+                speak(summary)
+
+            except wikipedia.exceptions.DisambiguationError as e:
+                option = e.options[0]  # pick first option
+                summary = wikipedia.summary(option, sentences=2)
+                print(f"\n[{APP_NAME}] Info about '{option}':\n{summary}\n")
+                speak(summary)
+
+            except wikipedia.exceptions.PageError:
+                speak(f"Sorry, I couldn’t find any page for {query}. Let me search online.")
                 webbrowser.open(f"https://www.google.com/search?q={query}")
-            except:
-                speak("Sorry, I am offline. I can only do basic tasks like time, notes, and system commands.")
+
+            except Exception:
+                speak(f"I don’t know about {query}, but I can search it online.")
+                webbrowser.open(f"https://www.google.com/search?q={query}")
 
 if __name__ == "__main__":
     print(f" Starting {APP_NAME} AI Assistant ")
