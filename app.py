@@ -197,23 +197,31 @@ def run_ai():
         # Fallback: auto decide response
         else:
             try:
-                summary = wikipedia.summary(query, sentences=2, auto_suggest=True, redirect=True)
-                print(f"\n[{APP_NAME}] Info about '{query}':\n{summary}\n")
-                speak(summary)
+                # If user says "about something", remove "about"
+                if query.startswith("about "):
+                    topic = query.replace("about ", "", 1).strip()
+                else:
+                    topic = query.strip()
+
+                # Fetch summary from Wikipedia
+                summary = wikipedia.summary(topic, sentences=2, auto_suggest=True, redirect=True)
+                print(f"\n[{APP_NAME}] Info about '{topic}':\n{summary}\n")
+                if summary:
+                    speak(summary)
 
             except wikipedia.exceptions.DisambiguationError as e:
-                option = e.options[0]  # pick first option
+                option = e.options[0]  # pick first suggested option
                 summary = wikipedia.summary(option, sentences=2)
                 print(f"\n[{APP_NAME}] Info about '{option}':\n{summary}\n")
                 speak(summary)
 
             except wikipedia.exceptions.PageError:
-                speak(f"Sorry, I couldn’t find any page for {query}. Let me search online.")
-                webbrowser.open(f"https://www.google.com/search?q={query}")
+                speak(f"Sorry, I couldn’t find any page for {topic}. Let me search online.")
+                webbrowser.open(f"https://www.google.com/search?q={topic}")
 
-            except Exception:
-                speak(f"I don’t know about {query}, but I can search it online.")
-                webbrowser.open(f"https://www.google.com/search?q={query}")
+            except Exception as ex:
+                speak(f"I don’t know about {topic}, but I can search it online.")
+                webbrowser.open(f"https://www.google.com/search?q={topic}")
 
 if __name__ == "__main__":
     print(f" Starting {APP_NAME} AI Assistant ")
