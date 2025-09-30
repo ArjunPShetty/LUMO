@@ -103,6 +103,7 @@ def run_ai():
                 song = take_command()
             speak(f"Playing {song} on YouTube")
             pywhatkit.playonyt(song)
+            print(f"[{APP_NAME}] Playing: {song}")
 
         # Google search
         elif query.startswith("search "):
@@ -194,32 +195,26 @@ def run_ai():
             speak(f"Goodbye! {APP_NAME} is shutting down. Have a nice day.")
             sys.exit()
 
-        # Fallback: auto decide response
+        # Wikipedia / Info Fallback
         else:
+            if query.startswith("about "):
+                topic = query.replace("about ", "", 1).strip()
+            else:
+                topic = query.strip()
+
             try:
-                # If user says "about something", remove "about"
-                if query.startswith("about "):
-                    topic = query.replace("about ", "", 1).strip()
-                else:
-                    topic = query.strip()
-
-                # Fetch summary from Wikipedia
-                summary = wikipedia.summary(topic, sentences=2, auto_suggest=True, redirect=True)
+                summary = wikipedia.summary(topic, sentences=2, auto_suggest=False, redirect=False)
                 print(f"\n[{APP_NAME}] Info about '{topic}':\n{summary}\n")
-                if summary:
-                    speak(summary)
-
-            except wikipedia.exceptions.DisambiguationError as e:
-                option = e.options[0]  # pick first suggested option
-                summary = wikipedia.summary(option, sentences=2)
-                print(f"\n[{APP_NAME}] Info about '{option}':\n{summary}\n")
                 speak(summary)
-
             except wikipedia.exceptions.PageError:
                 speak(f"Sorry, I couldn’t find any page for {topic}. Let me search online.")
                 webbrowser.open(f"https://www.google.com/search?q={topic}")
-
-            except Exception as ex:
+            except wikipedia.exceptions.DisambiguationError as e:
+                option = e.options[0]
+                summary = wikipedia.summary(option, sentences=2, auto_suggest=False, redirect=False)
+                print(f"\n[{APP_NAME}] Info about '{option}':\n{summary}\n")
+                speak(summary)
+            except Exception:
                 speak(f"I don’t know about {topic}, but I can search it online.")
                 webbrowser.open(f"https://www.google.com/search?q={topic}")
 
